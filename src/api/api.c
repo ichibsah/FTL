@@ -498,7 +498,7 @@ void getTopClients(const char *client_message, const int *sock)
 void getUpstreamDestinations(const char *client_message, const int *sock)
 {
 	bool sort = true;
-	int temparray[counters->upstreams][2], totalcount = 0;
+	int temparray[counters->upstreams][2], sumforwarded = 0;
 
 	if(command(client_message, "unsorted"))
 		sort = false;
@@ -516,7 +516,7 @@ void getUpstreamDestinations(const char *client_message, const int *sock)
 		for(unsigned i = 0; i < (sizeof(upstream->overTime)/sizeof(*upstream->overTime)); i++)
 			count += upstream->overTime[i];
 		temparray[upstreamID][1] = count;
-		totalcount += count;
+		sumforwarded += count;
 		logg("upstream %d \"%s#%d\": %d", upstreamID, getstr(upstream->ippos), upstream->port, count);
 	}
 
@@ -526,14 +526,21 @@ void getUpstreamDestinations(const char *client_message, const int *sock)
 		qsort(temparray, counters->upstreams, sizeof(int[2]), cmpdesc);
 	}
 
-	logg("totalcount: %d, counters->queries: %d", totalcount, counters->queries);
+	const int cached = cached_queries();
+	const int blocked = blocked_queries();
+	const int others = counters->queries - counters->status[QUERY_FORWARDED] - cached - blocked;
+	// The total number of DNS packets can be different than the total
+	// number of queries as FTL is periodically sending queries to multiple
+	// DNS upstream servers to probe which one is the fastest
+	const int totalqueries = sumforwarded + blocked + cached + others;
+
+	logg("sumforwarded: %d, counters->queries: %d", sumforwarded, counters->queries);
 	for(int x = 0; x < QUERY_STATUS_MAX; x++)
 		logg("status %d: %d", x, counters->status[x]);
-	logg("cache_queries: %d", cached_queries());
-	logg("blocked_queries: %d", blocked_queries());
-
-	const int totalqueries = totalcount + cached_queries() + blocked_queries();
-	const int others = counters->queries - totalqueries;
+	logg("cached: %d", cached);
+	logg("blocked: %d", blocked);
+	logg("others: %d", others);
+	logg("totalqueries: %d", totalqueries);
 
 	// Loop over available forward destinations
 	for(int i = -3; i < min(counters->upstreams, 8); i++)
@@ -548,9 +555,9 @@ void getUpstreamDestinations(const char *client_message, const int *sock)
 			ip = "blocked";
 			name = ip;
 
-			if(counters->queries > 0)
+			if(totalqueries > 0)
 				// Whats the percentage of blocked queries on the total amount of queries?
-				percentage = 1e2f * blocked_queries() / counters->queries;
+				percentage = 1e2f * blocked / totalqueries;
 		}
 		else if(i == -2)
 		{
@@ -558,9 +565,9 @@ void getUpstreamDestinations(const char *client_message, const int *sock)
 			ip = "cached";
 			name = ip;
 
-			if(counters->queries > 0)
+			if(totalqueries > 0)
 				// Whats the percentage of cached queries on the total amount of queries?
-				percentage = 1e2f * cached_queries() / counters->queries;
+				percentage = 1e2f * cached / totalqueries;
 		}
 		else if(i == -1)
 		{
@@ -568,9 +575,9 @@ void getUpstreamDestinations(const char *client_message, const int *sock)
 			ip = "other";
 			name = ip;
 
-			if(counters->queries > 0)
+			if(totalqueries > 0)
 				// Whats the percentage of cached queries on the total amount of queries?
-				percentage = 1e2f * others / counters->queries;
+				percentage = 1e2f * others / totalqueries;
 		}
 		else
 		{
