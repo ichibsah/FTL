@@ -525,6 +525,12 @@ void getUpstreamDestinations(const char *client_message, const int *sock)
 		qsort(temparray, counters->upstreams, sizeof(int[2]), cmpdesc);
 	}
 
+	logg("totalcount: %d, counters->queries: %d", totalcount, counters->queries);
+	for(int x = 0; x < QUERY_STATUS_MAX; x++)
+		logg("status %d: %d", x, counters->status[x]);
+	logg("cache_queries: %d", cached_queries());
+	logg("blocked_queries: %d", blocked_queries());
+
 	const int totalqueries = totalcount + cached_queries() + blocked_queries();
 	const int others = counters->queries - totalqueries;
 
