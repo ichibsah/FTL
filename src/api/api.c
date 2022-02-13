@@ -517,6 +517,7 @@ void getUpstreamDestinations(const char *client_message, const int *sock)
 			count += upstream->overTime[i];
 		temparray[upstreamID][1] = count;
 		totalcount += count;
+		logg("upstream %d \"%s#%d\": %d", upstreamID, getstr(upstream->ippos), upstream->port, count);
 	}
 
 	if(sort)
