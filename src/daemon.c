@@ -14,7 +14,7 @@
 #include "log.h"
 // sleepms()
 #include "timers.h"
-// close_telnet_socket()
+// saveport()
 #include "api/socket.h"
 // gravityDB_close()
 #include "database/gravity-db.h"
@@ -24,10 +24,12 @@
 #include <sys/utsname.h>
 // killed
 #include "signals.h"
+// sysinfo()
+#include <sys/sysinfo.h>
+#include <errno.h>
 
 pthread_t threads[THREADS_MAX] = { 0 };
 pthread_t api_threads[MAX_API_THREADS] = { 0 };
-pid_t api_tids[MAX_API_THREADS] = { 0 };
 bool resolver_ready = false;
 
 void go_daemon(void)
@@ -173,11 +175,25 @@ void delay_startup(void)
 	if(config.delay_startup == 0u)
 		return;
 
+	// Get uptime of system
+	struct sysinfo info = { 0 };
+	if(sysinfo(&info) == 0)
+	{
+		if(info.uptime > DELAY_UPTIME)
+		{
+			logg("Not sleeping as system has finished booting");
+			return;
+		}
+	}
+	else
+	{
+		logg("Unable to obtain sysinfo: %s (%i)", strerror(errno), errno);
+	}
+
 	// Sleep if requested by DELAY_STARTUP
-	logg("Sleeping for %d seconds as requested by configuration ...",
-	     config.delay_startup);
+	logg("Sleeping for %d seconds as requested by configuration ...", config.delay_startup);
 	sleep(config.delay_startup);
-	logg("Done sleeping, continuing startup of resolver...\n");
+	logg("Done sleeping, continuing startup of resolver...");
 }
 
 // Is this a fork?
@@ -214,7 +230,7 @@ static void terminate_threads(void)
 
 		if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
 		{
-			logg("Thread %s (%d) is busy, cancelling it (cannot set timout).",
+			logg("Thread %s (%d) is busy, cancelling it (cannot set timeout).",
 			     thread_names[i], i);
 			pthread_cancel(threads[i]);
 			continue;
@@ -241,15 +257,12 @@ void cleanup(const int ret)
 	// Do proper cleanup only if FTL started successfully
 	if(resolver_ready)
 	{
+		// Terminate threads
 		terminate_threads();
 
 		// Cancel and join possibly still running API worker threads
 		for(unsigned int tid = 0; tid < MAX_API_THREADS; tid++)
 		{
-			// Skip if this is an unused slot
-			if(api_threads[tid] == 0)
-				continue;
-
 			// Otherwise, cancel and join the thread
 			logg("Joining API worker thread %d", tid);
 			pthread_cancel(api_threads[tid]);
@@ -260,10 +273,6 @@ void cleanup(const int ret)
 		lock_shm();
 		gravityDB_close();
 		unlock_shm();
-
-		// Close sockets and delete Unix socket file handle
-		close_telnet_socket();
-		close_unix_socket(true);
 	}
 
 	// Empty API port file, port 0 = truncate file

@@ -156,10 +156,9 @@ void *GC_thread(void *val)
 			// Get minimum timestamp to keep (this can be set with MAXLOGAGE)
 			time_t mintime = (now - GCdelay) - config.maxlogage;
 
-			// Align to the start of the next hour. This will also align with
-			// the oldest overTime interval after GC is done.
-			mintime -= mintime % 3600;
-			mintime += 3600;
+			// Align the start time of this GC run to the GCinterval. This will also align with the
+			// oldest overTime interval after GC is done.
+			mintime -= mintime % GCinterval;
 
 			if(config.debug & DEBUG_GC)
 			{
@@ -220,6 +219,7 @@ void *GC_thread(void *val)
 					case QUERY_REGEX_CNAME: // Regex blacklisted domain in CNAME chain (fall through)
 					case QUERY_BLACKLIST_CNAME: // Exactly blacklisted domain in CNAME chain (fall through)
 					case QUERY_DBBUSY: // Blocked because gravity database was busy
+					case QUERY_SPECIAL_DOMAIN: // Blocked by special domain handling
 						if(domain != NULL)
 							domain->blockedcount--;
 						if(client != NULL)

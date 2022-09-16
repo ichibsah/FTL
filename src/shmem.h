@@ -18,22 +18,17 @@
 // TYPE_MAX
 #include "datastructure.h"
 
-// assert_sizeof
-#include "static_assert.h"
-
 typedef struct {
     const char *name;
     size_t size;
     void *ptr;
 } SharedMemory;
-ASSERT_SIZEOF(SharedMemory, 24, 12, 12);
 
 typedef struct {
 	int version;
 	unsigned int global_shm_counter;
 	unsigned int next_str_pos;
 } ShmSettings;
-ASSERT_SIZEOF(ShmSettings, 12, 12, 12);
 
 typedef struct {
 	int queries;
@@ -54,7 +49,6 @@ typedef struct {
 	int status[QUERY_STATUS_MAX];
 	int reply[QUERY_REPLY_MAX];
 } countersStruct;
-ASSERT_SIZEOF(countersStruct, 240, 240, 240);
 
 extern countersStruct *counters;
 
@@ -108,7 +102,8 @@ void _unlock_log(const char* func, const int line, const char * file);
 bool init_shmem(bool create_new);
 void destroy_shmem(void);
 size_t addstr(const char *str);
-const char *getstr(const size_t pos);
+#define getstr(pos) _getstr(pos, __FUNCTION__, __LINE__, __FILE__)
+const char *_getstr(const size_t pos, const char *func, const int line, const char *file);
 
 /**
  * Escapes a string by replacing special characters, such as spaces

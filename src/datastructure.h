@@ -15,8 +15,9 @@
 
 // enum privacy_level
 #include "enums.h"
-// assert_sizeof
-#include "static_assert.h"
+
+// Definitions like OVERTIME_SLOT
+#include "FTL.h"
 
 extern const char *querytypes[TYPE_MAX];
 
@@ -51,9 +52,6 @@ typedef struct {
 	} flags;
 } queriesData;
 
-// ARM needs extra padding at the end
-ASSERT_SIZEOF(queriesData, 56, 44, 44);
-
 typedef struct {
 	unsigned char magic;
 	bool new;
@@ -64,7 +62,6 @@ typedef struct {
 	size_t namepos;
 	time_t lastQuery;
 } upstreamsData;
-ASSERT_SIZEOF(upstreamsData, 640, 624, 624);
 
 typedef struct {
 	unsigned char magic;
@@ -91,7 +88,6 @@ typedef struct {
 	time_t lastQuery;
 	time_t firstSeen;
 } clientsData;
-ASSERT_SIZEOF(clientsData, 696, 668, 668);
 
 typedef struct {
 	unsigned char magic;
@@ -100,7 +96,6 @@ typedef struct {
 	uint32_t domainhash;
 	size_t domainpos;
 } domainsData;
-ASSERT_SIZEOF(domainsData, 24, 20, 20);
 
 typedef struct {
 	unsigned char magic;
@@ -109,9 +104,8 @@ typedef struct {
 	enum query_types query_type;
 	int domainID;
 	int clientID;
-	int black_regex_idx;
+	int domainlist_id;
 } DNSCacheData;
-ASSERT_SIZEOF(DNSCacheData, 16, 16, 16);
 
 void strtolower(char *str);
 uint32_t hashStr(const char *s) __attribute__((const));
@@ -119,13 +113,14 @@ int findQueryID(const int id);
 int findUpstreamID(const char * upstream, const in_port_t port);
 int findDomainID(const char *domain, const bool count);
 int findClientID(const char *client, const bool count, const bool aliasclient);
-int findCacheID(int domainID, int clientID, enum query_types query_type);
+#define findCacheID(domainID, clientID, query_type, create_new) _findCacheID(domainID, clientID, query_type, create_new, __FUNCTION__, __LINE__, __FILE__)
+int _findCacheID(const int domainID, const int clientID, const enum query_types query_type, const bool create_new, const char *func, const int line, const char *file);
 bool isValidIPv4(const char *addr);
 bool isValidIPv6(const char *addr);
 
 bool is_blocked(const enum query_status status) __attribute__ ((const));
-#define query_set_status(query, new_status) _query_set_status(query, new_status, __FILE__, __LINE__)
-void _query_set_status(queriesData *query, const enum query_status new_status, const char *file, const int line);
+#define query_set_status(query, new_status) _query_set_status(query, new_status, __FUNCTION__, __LINE__, __FILE__)
+void _query_set_status(queriesData *query, const enum query_status new_status, const char *func, const int line, const char *file);
 
 void FTL_reload_all_domainlists(void);
 void FTL_reset_per_client_domain_data(void);
@@ -141,14 +136,14 @@ const char *get_query_reply_str(const enum reply_type query) __attribute__ ((con
 
 // Pointer getter functions
 #define getQuery(queryID, checkMagic) _getQuery(queryID, checkMagic, __LINE__, __FUNCTION__, __FILE__)
-queriesData* _getQuery(int queryID, bool checkMagic, int line, const char * function, const char * file);
+queriesData* _getQuery(int queryID, bool checkMagic, int line, const char *func, const char *file);
 #define getClient(clientID, checkMagic) _getClient(clientID, checkMagic, __LINE__, __FUNCTION__, __FILE__)
-clientsData* _getClient(int clientID, bool checkMagic, int line, const char * function, const char * file);
+clientsData* _getClient(int clientID, bool checkMagic, int line, const char *func, const char *file);
 #define getDomain(domainID, checkMagic) _getDomain(domainID, checkMagic, __LINE__, __FUNCTION__, __FILE__)
-domainsData* _getDomain(int domainID, bool checkMagic, int line, const char * function, const char * file);
+domainsData* _getDomain(int domainID, bool checkMagic, int line, const char *func, const char *file);
 #define getUpstream(upstreamID, checkMagic) _getUpstream(upstreamID, checkMagic, __LINE__, __FUNCTION__, __FILE__)
-upstreamsData* _getUpstream(int upstreamID, bool checkMagic, int line, const char * function, const char * file);
+upstreamsData* _getUpstream(int upstreamID, bool checkMagic, int line, const char *func, const char *file);
 #define getDNSCache(cacheID, checkMagic) _getDNSCache(cacheID, checkMagic, __LINE__, __FUNCTION__, __FILE__)
-DNSCacheData* _getDNSCache(int cacheID, bool checkMagic, int line, const char * function, const char * file);
+DNSCacheData* _getDNSCache(int cacheID, bool checkMagic, int line, const char *func, const char *file);
 
 #endif //DATASTRUCTURE_H

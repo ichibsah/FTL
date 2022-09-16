@@ -45,6 +45,7 @@ enum query_status {
 	QUERY_RETRIED_DNSSEC,
 	QUERY_IN_PROGRESS,
 	QUERY_DBBUSY,
+	QUERY_SPECIAL_DOMAIN,
 	QUERY_STATUS_MAX
 } __attribute__ ((packed));
 
@@ -160,7 +161,7 @@ enum events {
 	RERESOLVE_HOSTNAMES_FORCE,
 	REIMPORT_ALIASCLIENTS,
 	PARSE_NEIGHBOR_CACHE,
-	RELOAD_BLOCKINGMODE,
+	RELOAD_BLOCKINGSTATUS,
 	EVENTS_MAX
 } __attribute__ ((packed));
 
@@ -185,13 +186,17 @@ enum busy_reply {
 } __attribute__ ((packed));
 
 enum thread_types {
-	TELNETv4,
-	TELNETv6,
-	SOCKET,
 	DB,
 	GC,
 	DNSclient,
 	THREADS_MAX
+} __attribute__ ((packed));
+
+enum telnet_type {
+	TELNETv4,
+	TELNETv6,
+	TELNET_SOCK,
+	TELNET_MAX
 } __attribute__ ((packed));
 
 enum message_type {
@@ -204,7 +209,8 @@ enum message_type {
 	LOAD_MESSAGE,
 	SHMEM_MESSAGE,
 	DISK_MESSAGE,
-	MAX_MESSAGE
+	INACCESSIBLE_ADLIST_MESSAGE,
+	MAX_MESSAGE,
 } __attribute__ ((packed));
 
 enum ptr_type {
